@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WeatherForEver.Data;
 using WeatherForEver.Models;
+using WeatherForEver.Services;
 
 namespace WeatherForEver
 {
@@ -18,6 +19,10 @@ namespace WeatherForEver
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+
+            builder.Services.AddControllersWithViews();
+
+            builder.Services.AddHttpClient<WeatherService>();
 
             builder.Services
             .AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
@@ -39,6 +44,7 @@ namespace WeatherForEver
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(
