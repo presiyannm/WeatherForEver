@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography.X509Certificates;
+using WeatherForEver.Data;
 using WeatherForEver.Models;
 using WeatherForEver.Models.ViewModels;
 
@@ -17,11 +19,14 @@ namespace WeatherForEver.Controllers
 
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AccountController(UserManager<ApplicationUser> userManager, IWebHostEnvironment webHostEnvironment, SignInManager<ApplicationUser> signInManager)
+        private readonly ApplicationDbContext _dbContext;
+
+        public AccountController(UserManager<ApplicationUser> userManager, IWebHostEnvironment webHostEnvironment, SignInManager<ApplicationUser> signInManager, ApplicationDbContext dbContext)
         {
             _userManager = userManager;
             _webHostEnvironment = webHostEnvironment;
             _signInManager = signInManager;
+            _dbContext = dbContext;
         }
 
         [HttpGet]
@@ -41,6 +46,16 @@ namespace WeatherForEver.Controllers
 
             if (ModelState.IsValid)
             {
+                if(_dbContext.Users.Any(x => x.UserName == user.UserName || x.Email == user.Email))
+                {
+                    return RedirectToAction("Error", "Home");
+                }
+                else if (registerViewModel.Password != registerViewModel.RepeatPassword)
+                {
+                    ModelState.AddModelError("RepeatPassword", "Repeated password do not match");
+                    return View(registerViewModel);
+                }
+
                 var folder = $"photos/{registerViewModel.Name}_{registerViewModel.AccountPhoto.FileName}";
 
                 string serverFolder = Path.Combine(_webHostEnvironment.WebRootPath, folder);
@@ -75,8 +90,8 @@ namespace WeatherForEver.Controllers
 
                 if (user == null)
                 {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return View();
+                    ModelState.AddModelError("Email", "User doesn't exist");
+                    return View(loginViewModel);
                 }
 
                 var result = await _signInManager.PasswordSignInAsync(user, loginViewModel.Password, isPersistent: true, lockoutOnFailure: false);
@@ -86,7 +101,7 @@ namespace WeatherForEver.Controllers
                     return RedirectToAction("Index", "Home");
                 }
 
-                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                ModelState.AddModelError(string.Empty, "Wrong password.");
             }
             return View();
         }
